@@ -1,4 +1,4 @@
-package com.example.addon.mixin;
+package com.astatin3.nomorerender.mixin.client;
 
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;

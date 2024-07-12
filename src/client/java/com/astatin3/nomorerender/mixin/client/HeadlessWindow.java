@@ -1,4 +1,4 @@
-package com.example.addon.mixin;
+package com.astatin3.nomorerender.mixin.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.util.Window;

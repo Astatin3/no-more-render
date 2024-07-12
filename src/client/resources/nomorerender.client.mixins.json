@@ -1,0 +1,13 @@
+{
+	"required": true,
+	"package": "com.astatin3.nomorerender.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+    "HeadlessMinecraftClient",
+    "HeadlessWidgetAccessor",
+    "HeadlessWindow"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,5 +1,10 @@
+.gradle
+.gradlew/
+run
 run/
+run/*
 build/
+.idea
 
 # Compiled class file
 *.class
