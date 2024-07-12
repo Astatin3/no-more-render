@@ -85,7 +85,7 @@ public class HeadlessMinecraftClient {
                     break;
                 case "writeelement":
                 case "welem":
-                    setElemText(Integer.parseInt(split[1]), command.substring(split[0].length()+split[1].length()-2));
+                    setElemText(Integer.parseInt(split[1]), command.substring(split[0].length()+split[1].length()+2));
                     break;
                 case "key":
                     if (split.length > 1) {
@@ -188,6 +188,7 @@ public class HeadlessMinecraftClient {
 
         if (targetElement instanceof TextFieldWidget widget) {
             self.execute(() -> {
+                widget.setText("");
                 widget.write(text);
             });
             System.out.println("Wrote in element: " + describeElement(widget));

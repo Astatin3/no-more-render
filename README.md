@@ -1,6 +1,9 @@
-# No More Render
-A mod that will run the latest version of Fabric without any gui!
+# Fabric Example Mod
 
-### Todo:
-- Remove meteorclient refrences
-- Make the CLI better
+## Setup
+
+For setup instructions please see the [fabric wiki page](https://fabricmc.net/wiki/tutorial:setup) that relates to the IDE that you are using.
+
+## License
+
+This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
