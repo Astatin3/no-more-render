@@ -18,8 +18,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -34,6 +35,9 @@ public class HeadlessMinecraftClient {
 //        System.out.println("#########################################");
 //    }
 
+    BufferedReader reader;
+    PrintWriter writer;
+
     @Shadow private Thread thread;
 
     @Inject(method = "<init>", at = @At("TAIL"))
@@ -46,12 +50,36 @@ public class HeadlessMinecraftClient {
 
     private void startCommandThread() {
         Thread commandThread = new Thread(() -> {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+//            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
             String line;
             try {
-                while ((line = reader.readLine()) != null) {
-                    parseCommand(line);
+                ServerSocket serverSocket = new ServerSocket(65000);
+                System.out.println("Server is listening on port " + 65000);
+
+                while (true) {
+                    Socket socket = serverSocket.accept();
+
+                    System.out.println("New client connected");
+
+                    InputStream input = socket.getInputStream();
+                    OutputStream output = socket.getOutputStream();
+
+                    reader = new BufferedReader(new InputStreamReader(input));
+                    writer = new PrintWriter(output, true);
+
+//                    line = reader.readLine();
+
+                    do {
+                        line = reader.readLine();
+                        parseCommand(line);
+
+                    } while (!line.equals("bye"));
+
+                    socket.close();
+
+//                    reader.next
                 }
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -103,7 +131,7 @@ public class HeadlessMinecraftClient {
                     }
                     break;
                 default:
-                    System.out.println("Unknown command: " + command);
+                    writer.println("Unknown command: " + command);
             }
         }catch(Exception e){
             e.printStackTrace();
@@ -113,7 +141,7 @@ public class HeadlessMinecraftClient {
     private void listElements() {
         Screen currentScreen = self.currentScreen;
         if (currentScreen == null) {
-            System.out.println("No screen is currently open.");
+            writer.println("No screen is currently open.");
             return;
         }
 
@@ -125,10 +153,10 @@ public class HeadlessMinecraftClient {
     private void printElements(List<? extends Element> elements, int depth, AtomicInteger index) {
         String indent = "  ".repeat(depth);
         for (Element element : elements) {
-            System.out.printf("%s%d: %s%n", indent, index.getAndIncrement(), describeElement(element));
+            writer.printf("%s%d: %s%n", indent, index.getAndIncrement(), describeElement(element));
             if (element instanceof ClickableWidget) {
                 ClickableWidget widget = (ClickableWidget) element;
-                System.out.printf("%s   Message: %s%n", indent, widget.getMessage().getString());
+                writer.printf("%s   Message: %s%n", indent, widget.getMessage().getString());
             }
             if (element instanceof net.minecraft.client.gui.ParentElement pe) {
                 printElements(pe.children(), depth + 1, index);
@@ -147,7 +175,7 @@ public class HeadlessMinecraftClient {
     private Element findElement(int targetIndex) {
         Screen currentScreen = self.currentScreen;
         if (currentScreen == null) {
-            System.out.println("No screen is currently open.");
+            writer.println("No screen is currently open.");
             return null;
         }
 
@@ -159,7 +187,7 @@ public class HeadlessMinecraftClient {
         Element targetElement = findElement(targetIndex);
 
         if (targetElement == null) {
-            System.out.println("Invalid element index.");
+            writer.println("Invalid element index.");
             return;
         }
 
@@ -167,12 +195,12 @@ public class HeadlessMinecraftClient {
             self.execute(() -> {
                 widget.onClick(widget.getX(), widget.getY());
             });
-            System.out.println("Clicked element: " + describeElement(widget));
+            writer.println("Clicked element: " + describeElement(widget));
             if (widget.getMessage() != null) {
-                System.out.println("Message: " + widget.getMessage().getString());
+                writer.println("Message: " + widget.getMessage().getString());
             }
         } else {
-            System.out.println("Element is not clickable: " + describeElement(targetElement));
+            writer.println("Element is not clickable: " + describeElement(targetElement));
         }
     }
 
@@ -180,7 +208,7 @@ public class HeadlessMinecraftClient {
         Element targetElement = findElement(targetIndex);
 
         if (targetElement == null) {
-            System.out.println("Invalid element index.");
+            writer.println("Invalid element index.");
             return;
         }
 
@@ -191,9 +219,9 @@ public class HeadlessMinecraftClient {
                 widget.setText("");
                 widget.write(text);
             });
-            System.out.println("Wrote in element: " + describeElement(widget));
+            writer.println("Wrote in element: " + describeElement(widget));
         } else {
-            System.out.println("Element is not a TextFieldWidget: " + describeElement(targetElement));
+            writer.println("Element is not a TextFieldWidget: " + describeElement(targetElement));
         }
     }
 
@@ -222,9 +250,9 @@ public class HeadlessMinecraftClient {
                 self.keyboard.onKey(handle, keyCode, 0, GLFW.GLFW_PRESS, 0);
                 self.keyboard.onKey(handle, keyCode, 0, GLFW.GLFW_RELEASE, 0);
             });
-            System.out.println("Pressed key: " + keyName);
+            writer.println("Pressed key: " + keyName);
         } else {
-            System.out.println("Unknown key: " + keyName);
+            writer.println("Unknown key: " + keyName);
         }
     }
 
@@ -235,9 +263,9 @@ public class HeadlessMinecraftClient {
             self.execute(() -> {
                 self.keyboard.onKey(handle, keyCode, 0, GLFW.GLFW_PRESS, 0);
             });
-            System.out.println("Key down: " + keyName);
+            writer.println("Key down: " + keyName);
         } else {
-            System.out.println("Unknown key: " + keyName);
+            writer.println("Unknown key: " + keyName);
         }
     }
 
@@ -248,9 +276,9 @@ public class HeadlessMinecraftClient {
             self.execute(() -> {
                 self.keyboard.onKey(handle, keyCode, 0, GLFW.GLFW_RELEASE, 0);
             });
-            System.out.println("Key up: " + keyName);
+            writer.println("Key up: " + keyName);
         } else {
-            System.out.println("Unknown key: " + keyName);
+            writer.println("Unknown key: " + keyName);
         }
     }
 
