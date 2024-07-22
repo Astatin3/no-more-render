@@ -7,10 +7,14 @@ import net.minecraft.client.gl.WindowFramebuffer;
 import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
 import net.minecraft.client.gui.screen.world.WorldListWidget;
 import net.minecraft.client.gui.widget.*;
+import net.minecraft.client.render.GameRenderer;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
+import net.minecraft.client.network.ServerAddress;
+import net.minecraft.client.network.ServerInfo;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,6 +24,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -41,11 +46,20 @@ public class HeadlessMinecraftClient {
 
     @Shadow private Thread thread;
 
+
+    @Unique final MinecraftClient self = (MinecraftClient)(Object)this;
+
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onGameLoaded(RunArgs args, CallbackInfo ci) {
 //        AddonTemplate.LOG.info("Hello from ExampleMixin!");
         System.out.println("#########################################");
+        System.out.println("#########################################");
+        System.out.println("(no-more-render) This client is running a mod that disables Minecraft from opening a window!");
+        System.out.println("#########################################");
+        System.out.println("#########################################");
+
         startCommandThread();
+        self.gameRenderer.onResized(10, 10);
     }
 
 
@@ -53,9 +67,19 @@ public class HeadlessMinecraftClient {
         Thread commandThread = new Thread(() -> {
 //            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
             String line;
+            int i = 0;
             try {
-                ServerSocket serverSocket = new ServerSocket(65000);
-                System.out.println("Server is listening on port " + 65000);
+                ServerSocket serverSocket;
+                while(true){
+                    try {
+                        serverSocket = new ServerSocket(65000+i, 50, InetAddress.getByName("127.0.0.1"));
+                        System.out.println("Server is listening on port " + (65000+i));
+                        break;
+                    } catch (java.net.BindException e){
+                        System.out.println("port " + (65000+i) + " failed, trying another");
+                        i++;
+                    }
+                }
 
                 while (true) {
                     Socket socket = serverSocket.accept();
@@ -90,19 +114,14 @@ public class HeadlessMinecraftClient {
         commandThread.start();
     }
 
-    @Unique final MinecraftClient self = (MinecraftClient)(Object)this;
-
-
     private void parseCommand(String command) {
+        if(command == null) return;
         String[] split = command.split(" ");
         try {
             switch (split[0].toLowerCase()) {
                 case "quit":
                 case "exit":
                     self.stop();
-                    break;
-                case "tick":
-                    self.tick();
                     break;
                 case "listelements":
                 case "elems":
@@ -129,6 +148,23 @@ public class HeadlessMinecraftClient {
                 case "keyup":
                     if (split.length > 1) {
                         simulateKeyUp(split[1]);
+                    }
+                    break;
+
+                case "connect":
+                    if (split.length == 1)
+                        writer.println("You must specify a server address!");
+                    if (split.length > 3)
+                        writer.println("Too many arguments!");
+                    else {
+
+                        int port = 25565;
+
+                        if (split.length == 3)
+                            port = Integer.parseInt(split[2]);
+
+                        writer.println("Connecting to: " + split[1] + ":" + port);
+                        connect_to_serv(new ServerAddress(split[1], port));
                     }
                     break;
                 default:
@@ -309,6 +345,13 @@ public class HeadlessMinecraftClient {
 
         // If not found, return unknown key
         return GLFW.GLFW_KEY_UNKNOWN;
+    }
+
+
+    public void connect_to_serv(ServerAddress addr){
+        self.execute(() -> {
+            ConnectScreen.connect(self.currentScreen, self, addr, new ServerInfo("Test", addr.getAddress(), ServerInfo.ServerType.OTHER), true, null);
+        });
     }
 
 }
