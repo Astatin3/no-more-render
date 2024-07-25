@@ -17,6 +17,8 @@ keydown <key>                          - Press a key
 keyup <key>                            - Release a key
 
 connect <Addr>:[Port]                  - Forcibly connect to a server
+chat <message>                         - Send chat message (Can run meteor and baritone chat commands)
+cmd <command>                          - Send command (Don't include first "/")
 
 quit/exit                              - Close the game
 ```

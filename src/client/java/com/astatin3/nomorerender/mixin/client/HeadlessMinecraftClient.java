@@ -4,7 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.RunArgs;
 import net.minecraft.client.gl.WindowFramebuffer;
-import net.minecraft.client.gui.Drawable;
+import net.minecraft.client.gui.hud.InGameHud;
+import net.minecraft.client.gui.screen.ChatScreen;
 import net.minecraft.client.gui.Element;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
@@ -47,6 +48,9 @@ public class HeadlessMinecraftClient {
     @Shadow private Thread thread;
 
 
+    @Shadow
+    @Final
+    public InGameHud inGameHud;
     @Unique final MinecraftClient self = (MinecraftClient)(Object)this;
 
     @Inject(method = "<init>", at = @At("TAIL"))
@@ -80,6 +84,8 @@ public class HeadlessMinecraftClient {
                         i++;
                     }
                 }
+
+                System.out.println("(no-more-render) Started!");
 
                 while (true) {
                     Socket socket = serverSocket.accept();
@@ -167,8 +173,16 @@ public class HeadlessMinecraftClient {
                         connect_to_serv(new ServerAddress(split[1], port));
                     }
                     break;
+                case "chat":
+                    assert self.player != null;
+                    self.player.networkHandler.sendChatMessage(command.substring(5));
+                    break;
+                case "cmd":
+                    assert self.player != null;
+                    self.player.networkHandler.sendCommand(command.substring(4));
+                    break;
                 default:
-                    writer.println("Unknown command: " + command);
+                    writer.println("Unknown command: " + split[0]);
             }
         }catch(Exception e){
             e.printStackTrace();
